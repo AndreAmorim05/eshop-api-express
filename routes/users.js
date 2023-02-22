@@ -4,6 +4,7 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
+
 router.get(`/`, async (req, res) =>{
     const userList = await User.find().select('-passwordHash');
 
@@ -20,6 +21,20 @@ router.get(`/:id`, async (req, res) =>{
         res.status(500).json('The user with the given ID was not found!');
     } 
     res.status(200).send(user);
+});
+
+router.get('/get/me', async (req, res) => {
+    const {userId} = req.auth; // extrai o id do usuário do objeto req.user
+    // busca o usuário no banco de dados usando o id
+    User.findById(userId).select('-passwordHash').then(user => {
+        if (!user) {
+        return res.status(404).send('User not found');
+        }
+        return res.send(user);
+    }).catch(err => {
+        console.error(err);
+        return res.status(500).send('Internal server error');
+    });
 });
 
 router.post(`/register`, async (req, res) => {
@@ -44,6 +59,7 @@ router.post(`/register`, async (req, res) => {
 
 router.post('/login', async (req, res) => {
     const user = await User.findOne({email: req.body.email});
+    const userReturn = await User.findOne({email: req.body.email}).select("-passwordHash");
     const secret = process.env.SECRET;
 
     if(!user) {
@@ -51,14 +67,14 @@ router.post('/login', async (req, res) => {
     }
 
     if (user && bcrypt.compareSync(req.body.password, user.passwordHash)) {
-        const token = jwt.sign({
+        const accessToken = jwt.sign({
             userId: user.id,
             isAdmin: user.isAdmin
         },
         secret,
         {expiresIn: '1d'}
         );
-        res.status(200).send({email: user.email, token});
+        res.status(200).send({accessToken, user:userReturn});
     } else {
         res.status(400).send('Password is wrong!');
     }
