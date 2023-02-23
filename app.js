@@ -11,9 +11,12 @@ const errorHandler = require('./helpers/error-handler');
 
 // Environment constants
 const api = process.env.API_URL;
+const frontend = process.env.FRONTEND_URL;
 
 // Middleware
-app.use(cors());
+app.use(cors({
+    origin: frontend,
+}));
 app.options('*', cors());
 app.use(bodyParser.json());
 app.use(morgan('tiny'));
